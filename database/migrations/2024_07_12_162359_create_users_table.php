@@ -21,7 +21,7 @@ return new class extends Migration
             $table->integer('buy_count')->default(0);
             $table->integer('reported_count')->default(0);
             $table->boolean('register_completed')->default(false);
-            $table->string('e-mail')->unique();
+            $table->string('email')->unique();
             $table->timestamps();
             // $table->timestamp('created_at');
             // $table->timestamp('updated_at');

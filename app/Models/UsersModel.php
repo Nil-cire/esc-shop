@@ -28,23 +28,26 @@ class UsersModel extends Model
         // 'complete' => 'boolean'
     ];
 
-    function get_user_by_email(string $email) {
+    function get_user_by_email(string $email)
+    {
         return $this->where('email', $email)->first();
     }
 
-    function get_user_by_platform($platform, $platformToken) {
+    function get_user_by_platform($platform, $platformToken)
+    {
         $platformKey = "{$platform}_id";
         // $hashToken = \Hash::make($platformToken);
         $hashToken = \Crypt::encryptString($platformToken);
         return $this->where($platformKey, $hashToken)->first();
     }
 
-    function add_user($email, $uuid, $name, $platform, $platformId) {
+    function add_user($email, $uuid, $name, $platform, $platformId)
+    {
         $user = [
-            'email'=>$email,
-            'uuid'=>$uuid,
-            'name'=>$name,
-            'register_completed'=>true
+            'email' => $email,
+            'uuid' => $uuid,
+            'name' => $name,
+            'register_completed' => true
         ];
 
         $hashId = \Hash::make($platformId);
@@ -66,5 +69,19 @@ class UsersModel extends Model
         }
 
         return $this->create($user);
+    }
+
+    function update_user($uuid, $name)
+    {
+        $user = [
+            'name' => $name
+        ];
+
+        $updateUser = tap(\DB::table($this->getTable())->where('uuid', $uuid))
+            ->update(array_filter($user, function ($value) {
+                return $value !== null && (trim($value) !== ''); }))
+            ->first();
+
+        return $updateUser;
     }
 }

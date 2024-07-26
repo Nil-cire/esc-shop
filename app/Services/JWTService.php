@@ -49,6 +49,18 @@ class JWTService
         return $payload;
     }
 
+    public function simple_verify($token) {
+        $payload = $this->decode($token);
+        $expire = $payload->exp;
+        $now = (new \DateTimeImmutable())->getTimestamp();
+        if ($expire < $now) {
+            return false;
+        }
+
+        $user_uuid = $payload->uid;
+        return $user_uuid;
+    }
+
     public function verify($token, $userUuid) {
         $payload = $this->decode($token);
         $expire = $payload->exp;

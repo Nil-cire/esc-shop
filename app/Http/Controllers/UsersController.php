@@ -26,6 +26,74 @@ class UsersController extends Controller
         }
     }
 
+    public function info(Request $request)
+    {
+        try {
+
+            $uuid = $request->input('id');
+            // $idArray = explode(',', $ids); 
+
+            $user = (new UsersModel)
+                ->where(
+                    'uuid',
+                    $uuid
+                )->get([
+                        'name',
+                        'buy_count',
+                        'reported_count'
+                    ])
+                ->first();
+            if (empty($user)) {
+                return response()->json(['error' => 'user not found', 'msg' => '查無使用者'], 404);
+            } else {
+                return response()->json(['data' => $user, 'msg' => '查詢成功'], 200);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage(), 'msg' => '查詢失敗'], 500);
+        }
+    }
+
+    public function update_info(Request $request)
+    {
+        try {
+            $failMsg = '更新失敗';
+            $successMsg = '更新成功';
+
+            $requestBody = json_decode($request->getContent(), false);
+
+            $userUuid = $requestBody->user_uid;
+            $name = $requestBody->name ?? null;
+
+            // 1. check required data provided
+            if (empty(trim($name))) {
+                return response()->json(['error' => 'name is required and can not be empty', 'msg' => $failMsg], 400);
+            }
+
+            // 2. check header auth
+            if ($request->hasHeader('Authorization')) {
+                // 如果 Authorization header 存在
+                $token = $request->header('Authorization');
+                $isValid = (new JWTService())->verify($token, $userUuid);
+                if (!$isValid) {
+                    return response()->json(['error' => 'invalid token', 'msg' => $failMsg], 401);
+                }
+            } else {
+                // 如果 Authorization header 不存在
+                return response()->json(['error' => 'missing Authorization', 'msg' => $failMsg], 401);
+            }
+
+            // 3. insert data
+            $userModel = new UsersModel();
+            $updateUser = $userModel->update_user(
+                $userUuid,
+                $name
+            );
+            return response()->json(['data' => $updateUser, 'msg' => $successMsg], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage(), 'msg' => $failMsg], 500);
+        }
+    }
+
     public function register(Request $request)
     {
 
@@ -140,9 +208,12 @@ class UsersController extends Controller
             $oauthId = '';
             switch ($platform) {
                 case 'google':
-                    if ($authToken === "9999") {
+                    if ($authToken === "9999" || $authToken === "9998") {
                         $oauthId = $authToken; // todo by api
                         $email = 'esc-test@shop.com';
+                        if ($authToken === "9998") {
+                            $email = 'esc-test2@shop.com';
+                        }
                     } else {
                         $url = (new GoogleOauth)->get_google_check_url($authToken);
                         try {
@@ -183,7 +254,7 @@ class UsersController extends Controller
                     if (empty($user)) {
                         // register
 
-                        $uuid = (string) \Str::uuid();
+                        $uuid = (string) \Str::orderedUuid();
 
                         $insertUser = $userModel->add_user(
                             $email,
@@ -239,21 +310,52 @@ class UsersController extends Controller
             $requestBody = json_decode($request->getContent(), true);
             $platform = array_key_exists("platform", $requestBody) ? $requestBody["platform"] : null;
             $authToken = array_key_exists("oauth_token", $requestBody) ? $requestBody["oauth_token"] : null;
-            $email = array_key_exists("email", $requestBody) ? $requestBody["email"] : null;
+            // $email = array_key_exists("email", $requestBody) ? $requestBody["email"] : null;
 
-            if (empty($platform) || empty($authToken) || empty($email)) {
+            if (empty($platform) || empty($authToken)) {
                 // throw new HttpException(400, "platform and token are required");
-                return response()->json(['error' => 'email, platform and token is required', 'msg' => $failMessage], 400);
+                return response()->json(['error' => 'platform and token is required', 'msg' => $failMessage], 400);
             }
 
             // 2. check if oauth token valid and get user info, add userName here
-            $newUserName = "新使用者";
+            $email = '';
             $oauthId = '';
             switch ($platform) {
                 case 'google':
-                    $oauthId = $authToken; // todo by api
+                    if ($authToken === "9999" || $authToken === "9998") {
+                        $oauthId = $authToken; // todo by api
+                        $email = 'esc-test@shop.com';
+                        if ($authToken === "9998") {
+                            $email = 'esc-test2@shop.com';
+                        }
+                    } else {
+                        $url = (new GoogleOauth)->get_google_check_url($authToken);
+                        try {
+                            $response = file_get_contents($url);
+                        } catch (\Exception $e) {
+                            return response()->json(['error' => 'invalid oauth token, oauth2 validation failed', 'msg' => '註冊失敗'], 400);
+                        }
+                        $json = json_decode($response, true);
+
+                        $oauthUniqueId = array_key_exists("sub", $json) ? $json["sub"] : null;
+                        $email = array_key_exists("email", $json) ? $json["email"] : null;
+                        // $newUserName = array_key_exists("name", $json) ? $json["name"] : "新使用者";
+
+                        if (empty($oauthUniqueId)) {
+                            return response()->json(['error' => 'invalid oauth token', 'msg' => '註冊失敗'], 400);
+                        }
+
+                        $oauthId = $oauthUniqueId;
+                    }
+
                     break;
             }
+
+            if (empty($email)) {
+                // throw new HttpException(400, "platform and token are required");
+                return response()->json(['error' => 'email is not valid', 'msg' => '註冊失敗'], 400);
+            }
+            ///////
 
             $usersModel = new UsersModel();
             switch ($platform) {
@@ -311,11 +413,11 @@ class UsersController extends Controller
                 if (!$isValidButExpired) {
                     return response()->json(['error' => 'invalid token', 'msg' => '更新失敗'], 401);
                 } else {
-                        $jwtToken = $jwtService->encode($userUuid, "refresh");
-                        $data = [
-                            "token" => $jwtToken,
-                        ];
-                        return response()->json(["data"=> $data, "msg"=> "更新成功"], 200);
+                    $jwtToken = $jwtService->encode($userUuid, "refresh");
+                    $data = [
+                        "token" => $jwtToken,
+                    ];
+                    return response()->json(["data" => $data, "msg" => "更新成功"], 200);
                 }
             } else {
                 // 如果 Authorization header 不存在

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\StoreResource;
 use App\Models\FavoriteModel;
 use Illuminate\Http\Request;
 use App\Services\JWTService;
@@ -14,6 +15,7 @@ class FavoriteController extends Controller
     // {
     // }
 
+    // auth-token
     public function favorites(Request $request)
     {
         $failMsg = '搜尋收藏清單失敗';
@@ -33,19 +35,41 @@ class FavoriteController extends Controller
             }
 
             $favoritesModel = new FavoriteModel();
-            $favorites = $favoritesModel->get_favorites($user_uid); 
-            return response()->json(['data' => $favorites, 'msg' => $successMsg], 200);
+            $favorites = $favoritesModel->get_favorites($user_uid);
+
+            // $response = array_map('to_stores', $favorites);
+            // $response = collect($favorites)->map(function ($data) {
+            //     return [
+            //         'uuid'=> $data->uuid,
+            //         'is_open'=> $data->is_open,
+            //         'name'=> $data->name,
+            //         'description'=> $data->description,
+            //         'type'=> $data->type,
+            //         'banner_image_path'=> $data->banner_image_path,
+            //     ];
+            // });
+
+            $response = StoreResource::collection($favorites);
+
+            return response()->json(['data' => $response, 'msg' => $successMsg], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage(), 'msg' => $failMsg], 500);
         }
     }
 
+    //auth-token
     public function add_favorite(Request $request)
     {
         // $id = $request->input('user_uid');
         $failMsg = '新增收藏清單失敗';
         $successMsg = '新增收藏清單成功';
         try {
+
+            // validation
+            $request->validate([
+                'user_uid' => 'required|uuid',
+                'store_uid' => 'required|uuid'
+            ]);
 
             $requestBody = json_decode($request->getContent(), false);
             $user_uid = $requestBody->user_uid ?? null;
@@ -77,7 +101,7 @@ class FavoriteController extends Controller
                     $user_uid,
                     $store_uid
                 );
-                return response()->json(['data' => $data, 'msg' => $successMsg], 200);
+                return response()->json(['data' => null, 'msg' => $successMsg], 200);
             } else {
                 return response()->json(['data' => null, 'msg' => '該收藏項目已存在'], 201);
             }
@@ -89,6 +113,7 @@ class FavoriteController extends Controller
         }
     }
 
+    // auth-token
     public function remove_favorite(Request $request)
     {
         // $id = $request->input('user_uid');
@@ -96,15 +121,15 @@ class FavoriteController extends Controller
         $successMsg = '移除收藏清單成功';
         try {
 
+            // 1. validation
+            $request->validate([
+                'user_uid' => 'required|uuid',
+                'store_uid' => 'required|uuid'
+            ]);
+
             $requestBody = json_decode($request->getContent(), false);
             $user_uid = $requestBody->user_uid ?? null;
             $store_uid = $requestBody->store_uid ?? null;
-
-            // 1. check required data provided
-            $validatedData = $request->validate([
-                'user_uid' => 'required|uuid',
-                'store_uid' => 'required|uuid',
-            ]);
 
             // 2. check header auth
             if ($request->hasHeader('Authorization')) {
@@ -126,7 +151,7 @@ class FavoriteController extends Controller
                     $user_uid,
                     $store_uid
                 );
-                return response()->json(['data' => $data, 'msg' => $successMsg], 200);
+                return response()->json(['data' => null, 'msg' => $successMsg], 200);
             } else {
                 return response()->json(['data' => null, 'msg' => '該收藏項目不存在'], 201);
             }

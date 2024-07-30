@@ -2,16 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\StoreResource;
 use App\Models\FavoriteModel;
 use App\Models\ProductModel;
 use App\Models\StoreModel;
 use App\Models\UsersModel;
 use App\Services\JWTService;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class StoreController extends Controller
 {
+    /**
+     * @unauthenticated
+     */
     public function test()
     {
 
@@ -39,13 +44,47 @@ class StoreController extends Controller
         }
     }
 
+    /**
+     * @unauthenticated
+     */
     public function stores(Request $request)
     {
         try {
             $stores = StoreModel::all();
-            return response()->json(['data' => $stores, 'msg' => "get stores success"], 200);
+            $response = StoreResource::collection($stores);
+            return response()->json(['data' => $response, 'msg' => "get stores success"], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage(), 'msg' => 'get store fail'], 500);
+        }
+    }
+
+    public function get_store_by_id(Request $request, $store_id)
+    {
+        $failMsg = '取得商店資訊失敗';
+        $successMsg = '取得商店資訊成功';
+        $emptyMsg = '查無商店資訊';
+
+        try {
+            $store = (new StoreModel)->get_by_uid($store_id);
+
+            if (empty($store)) {
+                return response()->json(['error' => 'store not found', 'msg' => $emptyMsg], 404);
+            }
+
+            // $response = [
+            //     'uuid' => $store->uuid,
+            //     'is_open' => $store->is_open,
+            //     'name' => $store->name,
+            //     'description' => $store->description,
+            //     'type' => $store->type,
+            //     'banner_image_path' => $store->banner_image_path,
+            // ];
+
+            $response = new StoreResource($store);
+
+            return response()->json(['data' => $response, 'msg' => $successMsg], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage(), 'msg' => $failMsg], 500);
         }
     }
 
@@ -54,6 +93,14 @@ class StoreController extends Controller
 
         try {
             // body: user_uid, name, description
+
+            $request->validate([
+                'user_uid' => 'required|uuid',
+                'store_name' => 'required|string|max:255',
+                'description' => 'string|max:255',
+                'type' => 'required|string|max:255',
+            ]);
+
             // check oauth token or password
             $requestBody = json_decode($request->getContent(), true);
             $userUuid = array_key_exists("user_uid", $requestBody) ? $requestBody["user_uid"] : null;
@@ -97,6 +144,14 @@ class StoreController extends Controller
     {
         try {
             // body: user_uid, name, description
+            $request->validate([
+                'user_uid' => 'required|uuid',
+                'store_uid' => 'required|uuid',
+                'store_name' => 'nullable|string|max:255',
+                'description' => 'nullable|string|min:0|max:255',
+                'type' => 'string|max:255',
+            ]);
+
             // check oauth token or password
             $requestBody = json_decode($request->getContent(), true);
             $userUuid = array_key_exists("user_uid", $requestBody) ? $requestBody["user_uid"] : null;
@@ -105,8 +160,8 @@ class StoreController extends Controller
             $description = array_key_exists("description", $requestBody) ? $requestBody["description"] : null;
             $type = array_key_exists("type", $requestBody) ? $requestBody["type"] : null;
 
-            if (empty($userUuid)) {
-                return response()->json(['error' => 'user_id is required', 'msg' => '更改失敗'], 400);
+            if (empty($userUuid) || empty($storeUuid)) {
+                return response()->json(['error' => 'user_id and store_uid are required', 'msg' => '更改失敗'], 400);
             }
 
             // 1. check header auth
@@ -123,10 +178,10 @@ class StoreController extends Controller
             }
 
             // 2. add store data
-
             $storeModel = new StoreModel();
             $store = $storeModel->updateInfo($storeUuid, $storeName, $description, $type);
-            return response()->json(['data' => $store, 'msg' => '更改成功'], 200);
+            $response = new StoreResource($store);
+            return response()->json(['data' => $response, 'msg' => '更改成功'], 200);
             // $existStore = $storeModel->get_by_uid($storeUuid);
             // if (!$existStore) {
             //     return response()->json(['error' => 'user store not exist', 'msg' => '更改失敗'], 400);
@@ -143,6 +198,12 @@ class StoreController extends Controller
     {
         try {
             // body: user_uid, store_uid, open
+            $request->validate([
+                'user_uid' => 'required|uuid',
+                'store_uid' => 'required|uuid',
+                'open' => 'required|boolean'
+            ]);
+
             // check oauth token or password
             $requestBody = json_decode($request->getContent(), true);
             $userUuid = array_key_exists("user_uid", $requestBody) ? $requestBody["user_uid"] : null;
@@ -170,15 +231,21 @@ class StoreController extends Controller
 
             $storeModel = new StoreModel();
             $storeModel->open($storeUuid, $open);
-            return response()->json(['data' => null, 'msg' => '更改成功'], 200);
+            return response()->json(['data' => ['is_open'=>$open], 'msg' => '更改成功'], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage(), 'msg' => '更改失敗'], 400);
         }
     }
 
-    function temporary_delete(Request $request) {
+    function temporary_delete(Request $request)
+    {
         try {
             // body: user_uid, name, description
+            $request->validate([
+                'user_uid' => 'required|uuid',
+                'store_uid' => 'required|uuid'
+            ]);
+
             // check oauth token or password
             $requestBody = json_decode($request->getContent(), true);
             $userUuid = array_key_exists("user_uid", $requestBody) ? $requestBody["user_uid"] : null;

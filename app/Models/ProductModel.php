@@ -32,12 +32,19 @@ class ProductModel extends Model
 
     protected $casts = [
         // 'rating' => 'decimal:2'
+        'price' => 'float',
+        'special_price' => 'float',
         'is_enable' => 'boolean'
     ];
 
     public function products()
     {
         return $this->all();
+    }
+
+    public function get_by_store_id($store_uid)
+    {
+        return $this->where('store_uid', $store_uid)->get();
     }
 
     public function add_product(
@@ -113,9 +120,13 @@ class ProductModel extends Model
             'link' => $link,
         ];
 
-        $updateProduct = tap(\DB::table($this->getTable())->where('store_uid', $store_uid)->where('uuid', $product_uid))
-            ->update(array_filter($product, function($value){return $value !== null;}))
-            ->first();
+        // $updateProduct = tap(\DB::table($this->getTable())->where('store_uid', $store_uid)->where('uuid', $product_uid))
+        //     ->update(array_filter($product, function($value){return $value !== null && trim($value) !== '';}))
+        //     ->first();
+
+        $updateProduct = tap(ProductModel::where(['store_uid' => $store_uid, 'uuid' => $product_uid])->first())
+            ->update(array_filter($product, function ($value) {
+                return $value !== null && trim($value) !== ''; }));
         // $updateProduct = $this->where('store_uid', $store_uid)->where('uuid', $product_uid)->update(array_filter($product));
         return $updateProduct;
     }
@@ -126,9 +137,9 @@ class ProductModel extends Model
             'is_enable' => $is_enable
         ];
 
-        $updateProduct = tap(\DB::table($this->getTable())->where('store_uid', $store_uid)->where('uuid', $product_uid))
-            ->update(array_filter($product, function($value){return $value !== null;}))
-            ->first();
+        $updateProduct = tap(ProductModel::where(['store_uid' => $store_uid, 'uuid' => $product_uid])->first())
+            ->update(array_filter($product, function ($value) {
+                return $value !== null; }));
         // $updateProduct = $this->where('store_uid', $store_uid)->where('uuid', $product_uid)->update(array_filter($product));
 
         return $updateProduct;

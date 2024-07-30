@@ -41,7 +41,8 @@ class StoreModel extends Model
         return $this->where('user_id', $user_uid)->first();
     }
 
-    function get_by_uid($uid) {
+    function get_by_uid($uid)
+    {
         return $this->where('uuid', $uid)->first();
     }
 
@@ -60,7 +61,8 @@ class StoreModel extends Model
         return $this->create($storeData);
     }
 
-    public function updateInfo($storeUid, $storeName, $description = "", $type = null) {
+    public function updateInfo($storeUid, $storeName, $description = "", $type = null)
+    {
         $infoData = [];
 
         if ($storeName) {
@@ -76,18 +78,25 @@ class StoreModel extends Model
         }
 
         if (!empty($infoData)) {
-            return $this->where('uuid', $storeUid)->update($infoData);
+            // return $this->where('uuid', $storeUid)->first()->update($infoData);
+            return tap(\DB::table($this->getTable())->where('uuid', $storeUid))
+                ->update(array_filter($infoData, function ($value) {
+                    return $value !== null && (trim($value) !== '');
+                }))
+                ->first();
         } else {
             return null;
         }
 
     }
 
-    public function open($storeUid, $open) {
-        $this->where('uuid', $storeUid)->update(['is_open'=> $open]);
+    public function open($storeUid, $open)
+    {
+        $this->where('uuid', $storeUid)->update(['is_open' => $open]);
     }
 
-    public function temporary_delete($storeUid, $delete) {
-        $this->where('uuid', $storeUid)->update(['is_deleted'=> $delete]);
+    public function temporary_delete($storeUid, $delete)
+    {
+        $this->where('uuid', $storeUid)->update(['is_deleted' => $delete]);
     }
 }

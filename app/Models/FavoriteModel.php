@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Ramsey\Collection\Collection;
 
 class FavoriteModel extends Model
 {
@@ -41,8 +42,7 @@ class FavoriteModel extends Model
     // token
     public function get_favorites($user_uid)
     {
-        $data = \DB::table('favorites') 
-            ->join('stores', 'favorites.store_uid', '=', 'stores.uuid')
+        $data = StoreModel::join('favorites', 'favorites.store_uid', '=', 'stores.uuid')
             ->where('user_uid', $user_uid)
             ->where('is_deleted', false)
             ->where('is_banned', false)

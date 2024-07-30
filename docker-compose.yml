@@ -1,0 +1,88 @@
+services:
+
+  #PHP Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: digitalocean.com/php
+    container_name: app
+    restart: unless-stopped
+    tty: true
+    environment:
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    depends_on:
+      - webserver
+      - db
+    networks:
+      - app-network
+
+  #Nginx Service
+  webserver:
+    image: nginx:alpine
+    container_name: webserver
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "8000:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - app-network
+
+  #MySQL Service
+  db:
+    platform: linux/x86_64
+    image: mysql:8.4.2
+    container_name: db
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3911:3306"
+    environment:
+      MYSQL_DATABASE: laravel
+      MYSQL_USER: laravel_user_001
+      MYSQL_PASSWORD: 2oriluai*
+      MYSQL_ROOT_PASSWORD: 2oriluai*_root
+      # MYSQL_ALLOW_EMPTY_PASSWORD: yes
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - dbdata:/var/lib/mysql/
+      - ./docker/mysql/my.cnf:/etc/mysql/my.cnf
+    networks:
+      - app-network
+
+  # Phpmyadmin Service
+  phpmyadmin:
+    # image: phpmyadmin/phpmyadmin
+    image: phpmyadmin:latest
+    container_name: pma
+    links:
+      - db
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: 2oriluai*_root
+      PMA_PORT: 3306
+    restart: always
+    ports:
+      - 8001:80
+    networks:
+      - app-network
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge
+
+#Volumes
+volumes:
+  dbdata:
+    driver: local

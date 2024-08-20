@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\StoreResource;
 use App\Models\FavoriteModel;
 use App\Models\ProductModel;
+use App\Models\Queue;
 use App\Models\StoreModel;
 use App\Models\UsersModel;
 use App\Services\JWTService;
@@ -22,15 +23,15 @@ class StoreController extends Controller
 
         try {
             $stores = '';
-            $stores = StoreModel::all();
+            $stores = Queue::all();
 
             // ProductModel::truncate();
 
-            // \Schema::table('products', function (Blueprint $table) {
+            // \Schema::table('queue', function (Blueprint $table) {
             //     // $table->boolean('is_enable')->default(true);
             //     // $table->dropColumn('uuid');
             //     // $uuid = \Str::uuid();    
-            //     $table->uuid('uuid')->unique()->nullable(false);
+            //     $table->uuid('store_uuid')->nullable()->change();
             //     // $table->decimal('special_price')->unsigned()->nullable()->change();
             // });
             // $stores = (new StoreModel)->index();

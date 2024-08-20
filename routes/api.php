@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\QueueController;
 use App\Http\Controllers\AuthUserController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\ProductController;
@@ -8,7 +9,7 @@ use App\Http\Controllers\UsersController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 
-Route::get('/v1/test/', [StoreController::class, 'test']);
+// Route::get('/v1/test/', [StoreController::class, 'test']);
 
 // use App\Http\Controllers\UserController;
 // Route::get('/v1/auth-users/', [AuthUserController::class, 'index']);
@@ -22,7 +23,7 @@ Route::post('/v1/register/', [UsersController::class, 'register_valid']);
 Route::post('/v1/refresh-token/', [UsersController::class, 'refresh_token']);
 Route::get('/v1/user', [UsersController::class, 'info']); //user?id=
 Route::post('/v1/user/info', [UsersController::class, 'update_info']);
-Route::get('/v1/user/list', [UsersController::class, 'index']);
+// Route::get('/v1/user/list', [UsersController::class, 'index']);
 
 // favorite
 Route::post('/v1/user/favorite', [FavoriteController::class, 'add_favorite']);
@@ -46,4 +47,14 @@ Route::delete('/v1/product/delete', [ProductController::class, 'delete_product']
 Route::post('/v1/product/edit', [ProductController::class, 'update_product_info']);
 Route::post('/v1/product/enable', [ProductController::class, 'enable_product']);
 
-// order
+// queue
+Route::post('/v1/queue/start', [QueueController::class, 'create']);
+Route::post('/v1/queue/restart', [QueueController::class, 'restart']);
+Route::post('/v1/queue/next-user', [QueueController::class, 'nextUser']);
+Route::post('/v1/queue/enqueue', [QueueController::class, 'enqueue']);
+Route::post('/v1/queue/pause', [QueueController::class, 'pause']);
+Route::post('/v1/queue/close', [QueueController::class, 'close']);
+Route::post('/v1/queue/update-info', [QueueController::class, 'updateInfo']);
+Route::post('/v1/queue/bind-store', [QueueController::class, 'bindStore']);
+Route::delete('/v1/queue', [QueueController::class, 'destroy']);
+
